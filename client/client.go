@@ -30,16 +30,29 @@ func main() {
 
 	fmt.Println("--- CLIENT APP ---")
 
-	//log to file instead of console
-	//setLog()
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("In order to join ChittyChat, type '/join'")
+	fmt.Println("--------------------")
+
+	//Infinite loop to listen for clients input.
+	fmt.Print("-> ")
+
+	//Read input into var input and any errors into err
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatal(err)
+	}
+	input = strings.TrimSpace(input) //Trim input
 
 	//connect to server and close the connection when program closes
-	fmt.Println("--- join Server ---")
-	ConnectToServer()
-	defer ServerConn.Close()
+	if input == "/join" {
+		fmt.Println("--- join Server ---")
+		ConnectToServer()
+		defer ServerConn.Close()
 
-	//start the biding
-	parseInput()
+		//start the biding
+		parseInput()
+	}
 }
 
 // connect to server
@@ -72,7 +85,7 @@ func ConnectToServer() {
 
 func parseInput() {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Type the amount you wish to increment with here. Type 0 to get the current value")
+	fmt.Println("Enter message (type '/leave' to leave ChittyChat")
 	fmt.Println("--------------------")
 
 	//Infinite loop to listen for clients input.
@@ -96,6 +109,9 @@ func parseInput() {
 		if err != nil {
 			if input == "hi" {
 				sayHi()
+			} else if input == "/leave" {
+				// TELL SERVER CLIENT IS LEAVING AND LOG IT
+				os.Exit(0)
 			}
 			continue
 		}
