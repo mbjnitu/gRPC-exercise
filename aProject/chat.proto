@@ -10,6 +10,7 @@ message FromClient {
 message FromServer {
     string name = 1;
     string body = 2;
+    int32 lamport = 3;
 }
 
 service Services {
