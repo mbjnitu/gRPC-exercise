@@ -1,6 +1,7 @@
 package chatserver
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"sync"
@@ -24,12 +25,16 @@ var messageHandleObject = messageHandle{}
 type ChatServer struct {
 }
 
+var clientCount int = 0
+var clientsThatReceivedMessage []int
+
 // define ChatService
 func (is *ChatServer) ChatService(csi Services_ChatServiceServer) error {
 
 	clientUniqueCode := rand.Intn(1e6)
 	errch := make(chan error)
 
+	clientCount++
 	// receive messages - init a go routine
 	go receiveFromStream(csi, clientUniqueCode, errch)
 
@@ -68,6 +73,15 @@ func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, e
 	}
 }
 
+func contains(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 // send message
 func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_ chan error) {
 
@@ -93,7 +107,17 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 			messageHandleObject.mu.Unlock()
 
 			//send message to designated client (do not send to the same client)
-			if senderUniqueCode != clientUniqueCode_ {
+			if !contains(clientsThatReceivedMessage, senderUniqueCode) {
+				clientsThatReceivedMessage = append(clientsThatReceivedMessage, senderUniqueCode)
+			}
+
+			if !contains(clientsThatReceivedMessage, clientUniqueCode_) {
+				clientsThatReceivedMessage = append(clientsThatReceivedMessage, clientUniqueCode_)
+				fmt.Println("HERE---")
+				fmt.Println(clientUniqueCode_)
+				fmt.Println(clientsThatReceivedMessage)
+				fmt.Println(len(clientsThatReceivedMessage))
+				fmt.Println(clientCount)
 
 				err := csi_.Send(&FromServer{Name: senderName4Client, Body: message4Client})
 
@@ -103,11 +127,20 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 
 				messageHandleObject.mu.Lock()
 
-				if len(messageHandleObject.MQue) > 1 {
-					messageHandleObject.MQue = messageHandleObject.MQue[1:] // delete the message at index 0 after sending to receiver
-				} else {
+				if len(clientsThatReceivedMessage) == clientCount {
+					//messageHandleObject.MQue = messageHandleObject.MQue[1:] // delete the message at index 0 after sending to receiver
+					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
+				} else {
+					//messageHandleObject.MQue = []messageUnit{}
 				}
+				//
+
+				// if len(messageHandleObject.MQue) > 1 {
+				// 	messageHandleObject.MQue = messageHandleObject.MQue[1:] // delete the message at index 0 after sending to receiver
+				// } else {
+				// 	messageHandleObject.MQue = []messageUnit{}
+				// }
 
 				messageHandleObject.mu.Unlock()
 
