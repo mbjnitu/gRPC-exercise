@@ -89,8 +89,9 @@ func (ch *clienthandle) sendMessage() {
 			Name: ch.clientName,
 			Body: clientMessage,
 		}
-
-		err = ch.stream.Send(clientMessageBox)
+		if len(clientMessage) < 127 {
+			err = ch.stream.Send(clientMessageBox)
+		}
 
 		if err != nil {
 			log.Printf("Error while sending message to server :: %v", err)
