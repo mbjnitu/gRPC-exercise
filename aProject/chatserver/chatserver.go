@@ -13,7 +13,6 @@ type messageUnit struct {
 	MessageBody       string
 	MessageUniqueCode int
 	ClientUniqueCode  int
-	Lamport           int
 }
 
 type messageHandle struct {
@@ -35,25 +34,19 @@ func (is *ChatServer) ChatService(csi Services_ChatServiceServer) error {
 	clientUniqueCode := rand.Intn(1e6)
 	errch := make(chan error)
 
-	lamport := 0
-
 	clientCount++
 	// receive messages - init a go routine
-	go receiveFromStream(csi, clientUniqueCode, errch, lamport)
+	go receiveFromStream(csi, clientUniqueCode, errch)
 
 	// send messages - init a go routine
-	go sendToStream(csi, clientUniqueCode, errch, lamport)
+	go sendToStream(csi, clientUniqueCode, errch)
 
 	return <-errch
 
 }
 
-func lamportSync() {
-
-}
-
 // receive messages
-func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_ chan error, lamport int) {
+func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_ chan error) {
 
 	//implement a loop
 	for {
@@ -70,7 +63,6 @@ func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, e
 				MessageBody:       mssg.Body,
 				MessageUniqueCode: rand.Intn(1e8),
 				ClientUniqueCode:  clientUniqueCode_,
-				Lamport:           lamport + 1,
 			})
 
 			log.Printf("%v", messageHandleObject.MQue[len(messageHandleObject.MQue)-1])
@@ -91,7 +83,7 @@ func contains(s []int, e int) bool {
 }
 
 // send message
-func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_ chan error, lamport int) {
+func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_ chan error) {
 
 	//implement a loop
 	for {
@@ -111,7 +103,6 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 			senderUniqueCode := messageHandleObject.MQue[0].ClientUniqueCode
 			senderName4Client := messageHandleObject.MQue[0].ClientName
 			message4Client := messageHandleObject.MQue[0].MessageBody
-			sendersLamport := messageHandleObject.MQue[0].Lamport
 
 			messageHandleObject.mu.Unlock()
 
@@ -128,7 +119,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				fmt.Println(len(clientsThatReceivedMessage))
 				fmt.Println(clientCount)
 
-				err := csi_.Send(&FromServer{Name: senderName4Client, Body: message4Client, Lamport: sendersLamport})
+				err := csi_.Send(&FromServer{Name: senderName4Client, Body: message4Client})
 
 				if err != nil {
 					errch_ <- err
