@@ -1,4 +1,4 @@
-package mainers
+package main
 
 import (
 	"log"
@@ -7,7 +7,6 @@ import (
 
 	"chatserver"
 
-	grpc "github.com/mbjnitu/gRPC-exercise/proto"
 	"google.golang.org/grpc"
 )
 
