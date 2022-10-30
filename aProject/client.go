@@ -2,12 +2,13 @@ package main
 
 import (
 	"bufio"
-	"chatserver"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+
+	"grpcChatServer/chatserver"
 
 	"google.golang.org/grpc"
 )

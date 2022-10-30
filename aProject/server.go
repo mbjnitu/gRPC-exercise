@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"chatserver"
+	"grpcChatServer/chatserver"
 
 	"google.golang.org/grpc"
 )
@@ -22,7 +22,9 @@ func main() {
 	}
 	log.Println("Listening @ : " + Port)
 
-	grpcserver := grpc.NewServer(listen)
+	var opts []grpc.ServerOption
+
+	grpcserver := grpc.NewServer(opts...)
 
 	cs := chatserver.ChatServer{}
 	chatserver.RegisterServicesServer(grpcserver, &cs)
