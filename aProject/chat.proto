@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "github.com/mbjnitu/gRPC-exercise/proto";
+
+package chatServer;
+
+message FromClient {
+    string name = 1;
+    string body = 2;
+}
+
+message FromServer {
+    string name = 1;
+    string body = 2;
+}
+
+service Services {
+    rpc ChatService(stream FromClient) returns (stream FromServer){};
+}
