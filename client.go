@@ -78,7 +78,7 @@ func (ch *clienthandle) sendMessage() {
 			Name: ch.clientName,
 			Body: clientMessage,
 		}
-		if len(clientMessage) < 127 {
+		if len(clientMessage) < 128 {
 			err = ch.stream.Send(clientMessageBox)
 		} else {
 			log.Printf("Your message is too long u dumb fuck")
