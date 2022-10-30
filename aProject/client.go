@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -78,12 +80,14 @@ func (ch *clienthandle) sendMessage() {
 	// create a loop
 	for {
 
-		reader := bufio.NewReader(os.Stdin)
-		clientMessage, err := reader.ReadString('\n')
+		//reader := bufio.NewReader(os.Stdin)
+		reader := &io.LimitedReader{R: os.Stdin, N: 127}
+		//clientMessage, err := reader.ReadString('\n')
+		clientMessage, err := ioutil.ReadAll(reader)
 		if err != nil {
 			log.Fatalf(" Failed to read from console :: %v", err)
 		}
-		clientMessage = strings.Trim(clientMessage, "\r\n")
+		//clientMessage = strings.Trim(clientMessage, "\r\n")
 
 		clientMessageBox := &chatserver.FromClient{
 			Name: ch.clientName,
