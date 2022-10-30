@@ -32,6 +32,7 @@ type FromClient struct {
 
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Body string `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	Lamport int32  `protobuf:"varint,3,opt,name=lamport,proto3" json:"lamport,omitempty"`
 }
 
 func (x *FromClient) Reset() {
@@ -80,6 +81,13 @@ func (x *FromClient) GetBody() string {
 	return ""
 }
 
+func (x *FromClient) GetLamport() int32 {
+	if x != nil {
+		return x.Lamport
+	}
+	return 0
+}
+
 type FromServer struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -87,6 +95,7 @@ type FromServer struct {
 
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Body string `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	Lamport int32  `protobuf:"varint,3,opt,name=lamport,proto3" json:"lamport,omitempty"`
 }
 
 func (x *FromServer) Reset() {
@@ -133,6 +142,13 @@ func (x *FromServer) GetBody() string {
 		return x.Body
 	}
 	return ""
+}
+
+func (x *FromServer) GetLamport() int32 {
+	if x != nil {
+		return x.Lamport
+	}
+	return 0
 }
 
 var File_chat_proto protoreflect.FileDescriptor

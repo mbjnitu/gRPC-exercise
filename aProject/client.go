@@ -86,8 +86,9 @@ func (ch *clienthandle) sendMessage() {
 		clientMessage = strings.Trim(clientMessage, "\r\n")
 
 		clientMessageBox := &chatserver.FromClient{
-			Name: ch.clientName,
-			Body: clientMessage,
+			Name:    ch.clientName,
+			Body:    clientMessage,
+			Lamport: 69,
 		}
 
 		err = ch.stream.Send(clientMessageBox)
@@ -111,7 +112,6 @@ func (ch *clienthandle) receiveMessage() {
 		}
 
 		//print message to console
-		fmt.Printf("%s : %s \n", mssg.Name, mssg.Body)
-
+		fmt.Printf("%s : %s : %d \n", mssg.Name, mssg.Body, mssg.Lamport)
 	}
 }
