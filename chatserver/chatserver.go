@@ -1,6 +1,7 @@
 package chatserver
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"sync"
@@ -108,7 +109,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 			//send message to designated client (do not send to the same client)
 			if !contains(clientsThatReceivedMessage, senderUniqueCode) {
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, senderUniqueCode)
-				if(len(clientsThatReceivedMessage) == clientCount) {
+				if len(clientsThatReceivedMessage) == clientCount {
 					messageHandleObject.mu.Lock()
 					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
@@ -116,7 +117,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				}
 			}
 
-			if !contains(clientsThatReceivedMessage, clientUniqueCode_) && clientCount != 1 {
+			if !contains(clientsThatReceivedMessage, clientUniqueCode_) && clientCount > 1 {
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, clientUniqueCode_)
 
 				err := csi_.Send(&FromServer{Name: senderName4Client, Body: message4Client})
@@ -127,13 +128,31 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 
 				messageHandleObject.mu.Lock()
 
-				if len(clientsThatReceivedMessage) == clientCount {
+				if len(clientsThatReceivedMessage) == clientCount && message4Client != "Left the chatroom" {
 					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
 				}
 
 				messageHandleObject.mu.Unlock()
 
+			}
+			fmt.Printf("%d", clientCount)
+			fmt.Printf("%d", len(clientsThatReceivedMessage))
+			if len(clientsThatReceivedMessage) == clientCount && clientCount > 1 {
+				fmt.Printf("Step1")
+				if message4Client == "Left the chatroom" {
+					fmt.Printf("Step2")
+					if clientUniqueCode_ == senderUniqueCode {
+						fmt.Printf("Step3")
+						csi_.Send(&FromServer{Name: senderName4Client, Body: "leaveToken:1230123"})
+						messageHandleObject.mu.Lock()
+						clientsThatReceivedMessage = nil
+						messageHandleObject.MQue = []messageUnit{}
+						messageHandleObject.mu.Unlock()
+						clientCount--
+						fmt.Printf("Step4 Length of slice %d", len(clientsThatReceivedMessage))
+					}
+				}
 			}
 
 		}

@@ -23,6 +23,13 @@ func main() {
 	}
 	defer conn.Close()
 
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("Your Name: ")
+	name, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf(" Failed to read from console :: %v", err)
+	}
+
 	//call ChatService to create a stream
 	client := chatserver.NewServicesClient(conn)
 
@@ -33,7 +40,9 @@ func main() {
 
 	// implement communication with gRPC server
 	ch := clienthandle{stream: stream}
-	ch.clientConfig()
+	ch.clientName = strings.Trim(name, "\r\n")
+	ch.sendJoinMessage(name)
+	//ch.clientConfig()
 	go ch.sendMessage()
 	go ch.receiveMessage()
 
@@ -58,7 +67,7 @@ func (ch *clienthandle) clientConfig() {
 		log.Fatalf(" Failed to read from console :: %v", err)
 	}
 	ch.clientName = strings.Trim(name, "\r\n")
-	ch.sendJoinMessage(name);
+	ch.sendJoinMessage(name)
 }
 
 // send message
@@ -73,15 +82,24 @@ func (ch *clienthandle) sendMessage() {
 			log.Fatalf(" Failed to read from console :: %v", err)
 		}
 		clientMessage = strings.Trim(clientMessage, "\r\n")
-
-		clientMessageBox := &chatserver.FromClient{
-			Name: ch.clientName,
-			Body: clientMessage,
-		}
-		if len(clientMessage) < 128 {
-			err = ch.stream.Send(clientMessageBox)
+		if clientMessage == "/leave" {
+			clientMessage = "Left the chatroom"
+			clientLeaveChatMessage := &chatserver.FromClient{
+				Name: ch.clientName,
+				Body: clientMessage,
+			}
+			err = ch.stream.Send(clientLeaveChatMessage)
+			//os.Exit(0)
 		} else {
-			log.Printf("Your message is too long u dumb fuck")
+			clientMessageBox := &chatserver.FromClient{
+				Name: ch.clientName,
+				Body: clientMessage,
+			}
+			if len(clientMessage) < 128 {
+				err = ch.stream.Send(clientMessageBox)
+			} else {
+				log.Printf("Your message is too long u dumb dumb")
+			}
 		}
 
 		if err != nil {
@@ -103,6 +121,9 @@ func (ch *clienthandle) receiveMessage() {
 		}
 
 		//print message to console
+		if mssg.Body == "leaveToken:1230123" {
+			os.Exit(0)
+		}
 		fmt.Printf("%s : %s \n", mssg.Name, mssg.Body)
 
 	}
