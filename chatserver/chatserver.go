@@ -1,7 +1,6 @@
 package chatserver
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"sync"
@@ -26,7 +25,7 @@ type ChatServer struct {
 }
 
 var clientCount int = 0
-var clientsThatReceivedMessage []int
+var clientsThatReceivedMessage, clientsThatLeftChat []int
 
 // define ChatService
 func (is *ChatServer) ChatService(csi Services_ChatServiceServer) error {
@@ -50,6 +49,9 @@ func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, e
 
 	//implement a loop
 	for {
+		if contains(clientsThatLeftChat, clientUniqueCode_) {
+			break
+		}
 		mssg, err := csi_.Recv()
 		if err != nil {
 			log.Printf("Error in receiving message from client :: %v", err)
@@ -92,6 +94,10 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 		for {
 
 			time.Sleep(500 * time.Millisecond)
+
+			if contains(clientsThatLeftChat, clientUniqueCode_) {
+				break
+			}
 
 			messageHandleObject.mu.Lock()
 
@@ -136,23 +142,15 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				messageHandleObject.mu.Unlock()
 
 			}
-			fmt.Printf("%d", clientCount)
-			fmt.Printf("%d", len(clientsThatReceivedMessage))
-			if len(clientsThatReceivedMessage) == clientCount && clientCount > 1 {
-				fmt.Printf("Step1")
-				if message4Client == "Left the chatroom" {
-					fmt.Printf("Step2")
-					if clientUniqueCode_ == senderUniqueCode {
-						fmt.Printf("Step3")
-						csi_.Send(&FromServer{Name: senderName4Client, Body: "leaveToken:1230123"})
-						messageHandleObject.mu.Lock()
-						clientsThatReceivedMessage = nil
-						messageHandleObject.MQue = []messageUnit{}
-						messageHandleObject.mu.Unlock()
-						clientCount--
-						fmt.Printf("Step4 Length of slice %d", len(clientsThatReceivedMessage))
-					}
-				}
+
+			if len(clientsThatReceivedMessage) == clientCount && clientCount > 1 && message4Client == "Left the chatroom" && clientUniqueCode_ == senderUniqueCode {
+				csi_.Send(&FromServer{Name: senderName4Client, Body: "leaveToken:1230123"})
+				messageHandleObject.mu.Lock()
+				clientsThatReceivedMessage = nil
+				messageHandleObject.MQue = []messageUnit{}
+				messageHandleObject.mu.Unlock()
+				clientCount--
+				clientsThatLeftChat = append(clientsThatLeftChat, senderUniqueCode)
 			}
 
 		}
