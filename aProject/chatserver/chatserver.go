@@ -1,9 +1,9 @@
 package chatserver
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -27,6 +27,8 @@ type ChatServer struct {
 
 var clientCount int = 0
 var clientsThatReceivedMessage []int
+
+var Lamport int = 0
 
 // define ChatService
 func (is *ChatServer) ChatService(csi Services_ChatServiceServer) error {
@@ -56,6 +58,13 @@ func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, e
 			errch_ <- err
 		} else {
 
+			log.Printf("Received message: %v", mssg)
+
+			receivedLamport, BodyWOLamport := SplitLamport(mssg.Body)
+			Lamport = SyncLamport(Lamport, receivedLamport)
+			Lamport = IncrementLamport(Lamport) //Receiving a message will increase the Lamport time
+			mssg.Body = BodyWOLamport + " | " + strconv.Itoa(Lamport)
+
 			messageHandleObject.mu.Lock()
 
 			messageHandleObject.MQue = append(messageHandleObject.MQue, messageUnit{
@@ -64,8 +73,7 @@ func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, e
 				MessageUniqueCode: rand.Intn(1e8),
 				ClientUniqueCode:  clientUniqueCode_,
 			})
-
-			log.Printf("%v", messageHandleObject.MQue[len(messageHandleObject.MQue)-1])
+			log.Printf("Lamport time is now " + strconv.Itoa(Lamport))
 
 			messageHandleObject.mu.Unlock()
 
@@ -113,13 +121,15 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 
 			if !contains(clientsThatReceivedMessage, clientUniqueCode_) {
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, clientUniqueCode_)
-				fmt.Println("HERE---")
-				fmt.Println(clientUniqueCode_)
-				fmt.Println(clientsThatReceivedMessage)
-				fmt.Println(len(clientsThatReceivedMessage))
-				fmt.Println(clientCount)
+
+				receivedLamport, BodyWOLamport := SplitLamport(message4Client)
+				Lamport = SyncLamport(Lamport, receivedLamport)
+				Lamport = IncrementLamport(Lamport) //Sending a message will increase the Lamport time
+				message4Client = BodyWOLamport + " | " + strconv.Itoa(Lamport)
 
 				err := csi_.Send(&FromServer{Name: senderName4Client, Body: message4Client})
+
+				log.Printf("Message was sent at lamport " + strconv.Itoa(Lamport))
 
 				if err != nil {
 					errch_ <- err
@@ -134,9 +144,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				}
 
 				messageHandleObject.mu.Unlock()
-
 			}
-
 		}
 
 		time.Sleep(100 * time.Millisecond)

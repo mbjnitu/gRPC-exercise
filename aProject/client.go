@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"grpcChatServer/chatserver"
 
 	"google.golang.org/grpc"
 )
+
+var Lamport int = 0
 
 func main() {
 
@@ -85,9 +88,11 @@ func (ch *clienthandle) sendMessage() {
 		}
 		clientMessage = strings.Trim(clientMessage, "\r\n")
 
+		Lamport = chatserver.IncrementLamport(Lamport) //Sending a message will increase the Lamport time
+
 		clientMessageBox := &chatserver.FromClient{
 			Name: ch.clientName,
-			Body: clientMessage,
+			Body: clientMessage + " | " + strconv.Itoa(Lamport),
 		}
 
 		err = ch.stream.Send(clientMessageBox)
@@ -106,12 +111,16 @@ func (ch *clienthandle) receiveMessage() {
 	//create a loop
 	for {
 		mssg, err := ch.stream.Recv()
+
+		receivedLamport, BodyWOLamport := chatserver.SplitLamport(mssg.Body)
+		Lamport = chatserver.SyncLamport(Lamport, receivedLamport)
+		Lamport = chatserver.IncrementLamport(Lamport) //Receiving a message will increase the Lamport time
+
 		if err != nil {
 			log.Printf("Error in receiving message from server :: %v", err)
 		}
 
 		//print message to console
-		fmt.Printf("%s : %s \n", mssg.Name, mssg.Body)
-
+		fmt.Printf("%s : %s \n", mssg.Name, BodyWOLamport+" | "+strconv.Itoa(Lamport))
 	}
 }
