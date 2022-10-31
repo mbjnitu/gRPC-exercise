@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -132,7 +133,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				}
 			}
 
-			if !contains(clientsThatReceivedMessage, clientUniqueCode_) && clientCount > 1 {
+			if !contains(clientsThatReceivedMessage, clientUniqueCode_) && clientCount != 1 {
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, clientUniqueCode_)
 
 				receivedLamport, BodyWOLamport := SplitLamport(message4Client)
@@ -150,7 +151,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 
 				messageHandleObject.mu.Lock()
 
-				if len(clientsThatReceivedMessage) == clientCount && message4Client != "Left the chatroom" {
+				if len(clientsThatReceivedMessage) == clientCount && !strings.Contains(message4Client, "Left the chatroom") {
 					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
 				}
@@ -158,7 +159,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				messageHandleObject.mu.Unlock()
 			}
 
-			if len(clientsThatReceivedMessage) == clientCount && clientCount > 1 && message4Client == "Left the chatroom" && clientUniqueCode_ == senderUniqueCode {
+			if len(clientsThatReceivedMessage) == clientCount && clientCount != 1 && strings.Contains(message4Client, "Left the chatroom") && clientUniqueCode_ == senderUniqueCode {
 				csi_.Send(&FromServer{Name: senderName4Client, Body: "leaveToken:1230123"})
 				messageHandleObject.mu.Lock()
 				clientsThatReceivedMessage = nil

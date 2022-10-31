@@ -86,7 +86,6 @@ func (ch *clienthandle) sendMessage() {
 		clientMessage = strings.Trim(clientMessage, "\r\n")
 		Lamport = chatserver.IncrementLamport(Lamport) //Sending a message will increase the Lamport time
 		if clientMessage == "/leave" {
-
 			clientMessage = "Left the chatroom"
 			clientLeaveChatMessage := &chatserver.FromClient{
 				Name: ch.clientName,
@@ -119,7 +118,9 @@ func (ch *clienthandle) receiveMessage() {
 	//create a loop
 	for {
 		mssg, err := ch.stream.Recv()
-
+		if mssg.Body == "leaveToken:1230123" {
+			os.Exit(0)
+		}
 		receivedLamport, BodyWOLamport := chatserver.SplitLamport(mssg.Body)
 		Lamport = chatserver.SyncLamport(Lamport, receivedLamport)
 		Lamport = chatserver.IncrementLamport(Lamport) //Receiving a message will increase the Lamport time
@@ -127,11 +128,8 @@ func (ch *clienthandle) receiveMessage() {
 		if err != nil {
 			log.Printf("Error in receiving message from server :: %v", err)
 		}
-
 		//print message to console
-		if mssg.Body == "leaveToken:1230123" {
-			os.Exit(0)
-		}
+
 		log.Printf("%s : %s \n", mssg.Name, BodyWOLamport+" | "+strconv.Itoa(Lamport))
 	}
 }
