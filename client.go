@@ -89,7 +89,7 @@ func (ch *clienthandle) sendMessage() {
 				Body: clientMessage,
 			}
 			err = ch.stream.Send(clientLeaveChatMessage)
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(5000 * time.Millisecond)
 			os.Exit(0)
 		} else {
 			clientMessageBox := &chatserver.FromClient{

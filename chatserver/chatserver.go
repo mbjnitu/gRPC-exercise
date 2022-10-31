@@ -1,6 +1,7 @@
 package chatserver
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"sync"
@@ -25,7 +26,7 @@ type ChatServer struct {
 }
 
 var clientCount int = 0
-var clientsThatReceivedMessage []int
+var clientsThatReceivedMessage, clientsThatLeftChat []int
 
 // define ChatService
 func (is *ChatServer) ChatService(csi Services_ChatServiceServer) error {
@@ -49,6 +50,9 @@ func receiveFromStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, e
 
 	//implement a loop
 	for {
+		if contains(clientsThatLeftChat, clientUniqueCode_) {
+			break
+		}
 		mssg, err := csi_.Recv()
 		if err != nil {
 			log.Printf("Error in receiving message from client :: %v", err)
@@ -89,7 +93,9 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 
 		//loop through messages in MQue
 		for {
-
+			if contains(clientsThatLeftChat, clientUniqueCode_) {
+				break
+			}
 			time.Sleep(500 * time.Millisecond)
 
 			messageHandleObject.mu.Lock()
@@ -106,7 +112,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 			messageHandleObject.mu.Unlock()
 
 			//send message to designated client (do not send to the same client)
-			if !contains(clientsThatReceivedMessage, senderUniqueCode) {
+			if !contains(clientsThatReceivedMessage, senderUniqueCode) && message4Client != "Left the chatroom" {
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, senderUniqueCode)
 				if len(clientsThatReceivedMessage) == clientCount {
 					messageHandleObject.mu.Lock()
@@ -115,27 +121,31 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 					messageHandleObject.mu.Unlock()
 				}
 			}
+			fmt.Println("Clientcount %d", clientCount)
+			fmt.Println(clientsThatReceivedMessage)
+			fmt.Println("UniqueClientCode %d", clientUniqueCode_)
 
 			if !contains(clientsThatReceivedMessage, clientUniqueCode_) && clientCount != 1 {
+				fmt.Println("Is in send ifstatement")
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, clientUniqueCode_)
 
 				err := csi_.Send(&FromServer{Name: senderName4Client, Body: message4Client})
 
 				if err != nil {
+					fmt.Println("SHIT ERROR")
 					errch_ <- err
 				}
-
-				messageHandleObject.mu.Lock()
-
+				fmt.Println("SHIT QUE")
 				if len(clientsThatReceivedMessage) == clientCount {
 					if message4Client == "Left the chatroom" {
+						clientsThatLeftChat = append(clientsThatLeftChat, senderUniqueCode)
 						clientCount--
 					}
+					messageHandleObject.mu.Lock()
 					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
+					messageHandleObject.mu.Unlock()
 				}
-
-				messageHandleObject.mu.Unlock()
 
 			}
 
