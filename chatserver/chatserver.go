@@ -108,7 +108,7 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 			//send message to designated client (do not send to the same client)
 			if !contains(clientsThatReceivedMessage, senderUniqueCode) {
 				clientsThatReceivedMessage = append(clientsThatReceivedMessage, senderUniqueCode)
-				if(len(clientsThatReceivedMessage) == clientCount) {
+				if len(clientsThatReceivedMessage) == clientCount {
 					messageHandleObject.mu.Lock()
 					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
@@ -128,6 +128,9 @@ func sendToStream(csi_ Services_ChatServiceServer, clientUniqueCode_ int, errch_
 				messageHandleObject.mu.Lock()
 
 				if len(clientsThatReceivedMessage) == clientCount {
+					if message4Client == "Left the chatroom" {
+						clientCount--
+					}
 					clientsThatReceivedMessage = nil
 					messageHandleObject.MQue = []messageUnit{}
 				}
