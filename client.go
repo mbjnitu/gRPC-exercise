@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
-	"time"
 
 	"grpcChatServer/chatserver"
 
 	"google.golang.org/grpc"
 )
+
+var Lamport int = 0
 
 func main() {
 	//connect to grpc server
@@ -58,7 +60,7 @@ func (ch *clienthandle) clientConfig() {
 		log.Fatalf(" Failed to read from console :: %v", err)
 	}
 	ch.clientName = strings.Trim(name, "\r\n")
-	ch.sendJoinMessage(name);
+	ch.sendJoinMessage(name)
 }
 
 // send message
@@ -74,9 +76,11 @@ func (ch *clienthandle) sendMessage() {
 		}
 		clientMessage = strings.Trim(clientMessage, "\r\n")
 
+		Lamport = chatserver.IncrementLamport(Lamport) //Sending a message will increase the Lamport time
+
 		clientMessageBox := &chatserver.FromClient{
 			Name: ch.clientName,
-			Body: clientMessage,
+			Body: clientMessage + " | " + strconv.Itoa(Lamport),
 		}
 		if len(clientMessage) < 128 {
 			err = ch.stream.Send(clientMessageBox)
@@ -98,20 +102,27 @@ func (ch *clienthandle) receiveMessage() {
 	//create a loop
 	for {
 		mssg, err := ch.stream.Recv()
+
+		receivedLamport, BodyWOLamport := chatserver.SplitLamport(mssg.Body)
+		Lamport = chatserver.SyncLamport(Lamport, receivedLamport)
+		Lamport = chatserver.IncrementLamport(Lamport) //Receiving a message will increase the Lamport time
+
 		if err != nil {
 			log.Printf("Error in receiving message from server :: %v", err)
 		}
 
 		//print message to console
-		fmt.Printf("%s : %s \n", mssg.Name, mssg.Body)
-
+		fmt.Printf("%s : %s \n", mssg.Name, BodyWOLamport+" | "+strconv.Itoa(Lamport))
 	}
 }
 
 func (ch *clienthandle) sendJoinMessage(name string) {
+
+	Lamport = chatserver.IncrementLamport(Lamport) //Sending a message will increase the Lamport time
+
 	clientMessageBox := &chatserver.FromClient{
 		Name: name,
-		Body: "Joined the chatroom - " + time.Now().Format("2006.01.02 15:04:05"),
+		Body: "Joined the chatroom | " + strconv.Itoa(Lamport),
 	}
 	ch.stream.Send(clientMessageBox)
 }
