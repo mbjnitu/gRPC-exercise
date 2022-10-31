@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"grpcChatServer/chatserver"
 
@@ -14,20 +15,8 @@ import (
 )
 
 func main() {
-
-	fmt.Println("Enter Server IP:Port ::: ")
-	reader := bufio.NewReader(os.Stdin)
-	serverID, err := reader.ReadString('\n')
-
-	if err != nil {
-		log.Printf("Failed to read from console :: %v", err)
-	}
-	serverID = strings.Trim(serverID, "\r\n")
-
-	log.Println("Connecting : " + serverID)
-
 	//connect to grpc server
-	conn, err := grpc.Dial(serverID, grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:5000", grpc.WithInsecure())
 
 	if err != nil {
 		log.Fatalf("Faile to conncet to gRPC server :: %v", err)
@@ -63,13 +52,13 @@ type clienthandle struct {
 func (ch *clienthandle) clientConfig() {
 
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("Your Name : ")
+	fmt.Printf("Your Name: ")
 	name, err := reader.ReadString('\n')
 	if err != nil {
 		log.Fatalf(" Failed to read from console :: %v", err)
 	}
 	ch.clientName = strings.Trim(name, "\r\n")
-
+	ch.sendJoinMessage(name);
 }
 
 // send message
@@ -89,8 +78,11 @@ func (ch *clienthandle) sendMessage() {
 			Name: ch.clientName,
 			Body: clientMessage,
 		}
-
-		err = ch.stream.Send(clientMessageBox)
+		if len(clientMessage) < 128 {
+			err = ch.stream.Send(clientMessageBox)
+		} else {
+			log.Printf("Your message is too long u dumb fuck")
+		}
 
 		if err != nil {
 			log.Printf("Error while sending message to server :: %v", err)
@@ -114,4 +106,12 @@ func (ch *clienthandle) receiveMessage() {
 		fmt.Printf("%s : %s \n", mssg.Name, mssg.Body)
 
 	}
+}
+
+func (ch *clienthandle) sendJoinMessage(name string) {
+	clientMessageBox := &chatserver.FromClient{
+		Name: name,
+		Body: "Joined the chatroom - " + time.Now().Format("2006.01.02 15:04:05"),
+	}
+	ch.stream.Send(clientMessageBox)
 }
