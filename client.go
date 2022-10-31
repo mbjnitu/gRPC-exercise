@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"grpcChatServer/chatserver"
 
@@ -61,7 +60,7 @@ func (ch *clienthandle) clientConfig() {
 		log.Fatalf(" Failed to read from console :: %v", err)
 	}
 	ch.clientName = strings.Trim(name, "\r\n")
-	ch.sendJoinMessage(name);
+	ch.sendJoinMessage(name)
 }
 
 // send message
@@ -118,9 +117,12 @@ func (ch *clienthandle) receiveMessage() {
 }
 
 func (ch *clienthandle) sendJoinMessage(name string) {
+
+	Lamport = chatserver.IncrementLamport(Lamport) //Sending a message will increase the Lamport time
+
 	clientMessageBox := &chatserver.FromClient{
 		Name: name,
-		Body: "Joined the chatroom - " + time.Now().Format("2006.01.02 15:04:05"),
+		Body: "Joined the chatroom | " + strconv.Itoa(Lamport),
 	}
 	ch.stream.Send(clientMessageBox)
 }
